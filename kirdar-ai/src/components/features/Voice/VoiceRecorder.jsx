@@ -78,7 +78,8 @@ const VoiceRecorder = ({ onTranscription, onError, disabled }) => {
       formData.append('audio', audioBlob);
 
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5001/api/audio/transcribe', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/audio/transcribe`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

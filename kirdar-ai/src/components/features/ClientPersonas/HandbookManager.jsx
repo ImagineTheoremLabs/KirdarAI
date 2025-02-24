@@ -16,7 +16,8 @@ const HandbookManager = () => {
       setLoading(true);
       setError('');
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5001/api/handbook', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/handbook`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -71,7 +72,8 @@ const HandbookManager = () => {
       });
 
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5001/api/handbook/upload', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/handbook/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -98,7 +100,8 @@ const HandbookManager = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5001/api/handbook/${fileId}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/handbook/${fileId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -123,7 +126,8 @@ const HandbookManager = () => {
   const handleDownload = async (fileId, filename) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5001/api/handbook/download/${fileId}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/handbook/download/${fileId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

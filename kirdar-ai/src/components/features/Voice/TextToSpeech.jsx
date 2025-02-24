@@ -36,7 +36,8 @@ const TextToSpeech = ({ text, autoPlay = false }) => {
         cleanup();
 
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5001/api/audio/speech', {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+        const response = await fetch(`${apiUrl}/audio/speech`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
