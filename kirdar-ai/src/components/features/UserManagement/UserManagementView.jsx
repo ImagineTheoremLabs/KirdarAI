@@ -124,7 +124,8 @@ const UserManagementView = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5001/api/auth/trainees', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/auth/trainees`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -148,7 +149,8 @@ const UserManagementView = () => {
       const token = localStorage.getItem('token');
       
       // Fetch all scenarios
-      const scenariosResponse = await fetch('http://localhost:5001/api/scenarios', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const scenariosResponse = await fetch(`${apiUrl}/scenarios`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -160,7 +162,7 @@ const UserManagementView = () => {
 
       // Fetch current assignments
       const assignmentsResponse = await fetch(
-        `http://localhost:5001/api/scenario-assignments/user/${selectedUser._id}`,
+        `${apiUrl}/scenario-assignments/user/${selectedUser._id}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -186,7 +188,8 @@ const UserManagementView = () => {
       const token = localStorage.getItem('token');
       
       // Fetch all personas
-      const allPersonasResponse = await fetch('http://localhost:5001/api/personas', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const allPersonasResponse = await fetch(`${apiUrl}/personas`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

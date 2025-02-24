@@ -49,7 +49,8 @@ const ClientCard = ({ persona, onEdit, onDelete, isAdmin }) => {
   const fetchTrainees = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5001/api/auth/trainees', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/auth/trainees`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -80,7 +81,8 @@ const ClientCard = ({ persona, onEdit, onDelete, isAdmin }) => {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5001/api/persona-assignments', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/persona-assignments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

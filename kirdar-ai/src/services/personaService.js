@@ -13,7 +13,8 @@ class PersonaService {
         throw new Error('Maximum number of personas exceeded (limit: 20)');
       }
 
-      const response = await fetch('http://localhost:5001/api/personas/generate', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/personas/generate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -85,7 +86,8 @@ class PersonaService {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
-      const response = await fetch('http://localhost:5001/api/personas', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/personas`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -9,7 +9,8 @@ class ScenarioService {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('http://localhost:5001/api/scenarios', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/scenarios`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

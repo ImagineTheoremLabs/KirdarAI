@@ -145,7 +145,8 @@ const ClientPersonas = () => {
       setError(null);
       const token = localStorage.getItem('token');
       
-      const response = await fetch('http://localhost:5001/api/personas', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/personas`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -208,7 +209,8 @@ const ClientPersonas = () => {
 
   const handleDeletePersona = async (persona) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/personas/${persona._id}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/personas/${persona._id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -239,7 +241,8 @@ const ClientPersonas = () => {
       setError('');
       const token = localStorage.getItem('token');
       
-      const response = await fetch('http://localhost:5001/api/personas/reset', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/personas/reset`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -271,7 +274,8 @@ const ClientPersonas = () => {
       setError(null);
       setGenerationSuccess('');
 
-      const response = await fetch('http://localhost:5001/api/personas/generate', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${apiUrl}/personas/generate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
