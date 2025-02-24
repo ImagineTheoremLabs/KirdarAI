@@ -10,7 +10,10 @@ const guestRoutes = require('./routes/guestRoutes');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*', // Will use FRONTEND_URL from .env or allow all origins
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
@@ -34,9 +37,10 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('✅ Connected to MongoDB');
     app.listen(PORT, () => {
+      const serverUrl = process.env.BACKEND_URL || `http://localhost:${PORT}`;
       console.log(`🚀 Server is running on port ${PORT}`);
       console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
-      console.log(`📑 API Documentation: http://localhost:${PORT}/api/health`);
+      console.log(`📑 API Documentation: ${serverUrl}/api/health`);
     });
   })
   .catch((err) => {

@@ -33,9 +33,9 @@ const adminGuestRoutes = require('./routes/adminGuestRoutes');
 // Middleware Configuration
 // =======================
 
-// Enable CORS with specific origin and credentials
+// Enable CORS with configurable origin from environment variable
 app.use(cors({
-  origin: 'http://localhost:5173', // Update this to your frontend URL
+  origin: process.env.FRONTEND_URL || '*', // Will use FRONTEND_URL from .env or allow all origins
   credentials: true
 }));
 
@@ -169,10 +169,11 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
+  const serverUrl = process.env.BACKEND_URL || `http://localhost:${PORT}`;
   console.log(`
 🚀 Server is running on port ${PORT}
 🌐 Environment: ${process.env.NODE_ENV || 'production'}
-📑 API Documentation: http://localhost:${PORT}/api/health
+📑 API Documentation: ${serverUrl}/api/health
   `);
 });
 
