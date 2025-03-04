@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/config";
 // src/components/features/Voice/VoiceInterface.jsx
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Mic, MicOff, Volume2, VolumeX, Loader } from 'lucide-react';
@@ -48,7 +49,7 @@ const VoiceInterface = ({
       formData.append('audio', blob, 'audio.webm');
 
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5001/api/audio/transcribe', {
+      const response = await fetch('${API_BASE_URL}/audio/transcribe', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -149,7 +150,7 @@ const VoiceInterface = ({
       try {
         console.log('Performing text-to-speech...');
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5001/api/audio/speech', {
+        const response = await fetch('${API_BASE_URL}/audio/speech', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

@@ -1,7 +1,7 @@
 // src/components/features/Auth/Login.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Loader } from 'lucide-react';
+import { Mail, Lock, Loader, AlertCircle, RefreshCw, WifiOff } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import ApiService from '../../../services/apiService';
 
@@ -10,15 +10,34 @@ const Login = () => {
   const { login: authLogin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isConnectionError, setIsConnectionError] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
 
+  // Listen for API connection changes
+  useEffect(() => {
+    const handleConnectionChange = (event) => {
+      if (event.detail.connected && isConnectionError) {
+        setError('');
+        setIsConnectionError(false);
+      }
+    };
+
+    window.addEventListener('api-connection-change', handleConnectionChange);
+    
+    return () => {
+      window.removeEventListener('api-connection-change', handleConnectionChange);
+    };
+  }, [isConnectionError]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setIsConnectionError(false);
 
     try {
       console.log('Attempting login...');
@@ -36,9 +55,37 @@ const Login = () => {
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message || 'Failed to login');
+      
+      // Display user-friendly error messages
+      if (err.isConnectionError) {
+        setError('Unable to connect to the server. Please check your internet connection or try again later.');
+        setIsConnectionError(true);
+      } else if (err.status === 401) {
+        setError('Invalid email or password. Please try again.');
+      } else if (err.status === 403) {
+        setError('Your account has been disabled. Please contact support.');
+      } else {
+        setError(err.message || 'Failed to login. Please try again later.');
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRetryConnection = async () => {
+    setIsRetrying(true);
+    try {
+      const isConnected = await ApiService.checkApiConnectivity();
+      if (isConnected) {
+        setError('');
+        setIsConnectionError(false);
+      } else {
+        setError('Still unable to connect to the server. Please try again later.');
+      }
+    } catch (err) {
+      setError('Failed to check connection. Please try again later.');
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -50,8 +97,41 @@ const Login = () => {
         </h2>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 mb-6">
-            <p className="text-red-500">{error}</p>
+          <div className={`rounded-lg p-4 mb-6 flex items-start ${
+            isConnectionError 
+              ? 'bg-red-500/10 border border-red-500/50 text-red-500' 
+              : 'bg-yellow-500/10 border border-yellow-500/50 text-yellow-500'
+          }`}>
+            {isConnectionError ? (
+              <>
+                <WifiOff className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p>{error}</p>
+                  <button
+                    onClick={handleRetryConnection}
+                    disabled={isRetrying}
+                    className="mt-2 flex items-center text-xs bg-red-500/20 hover:bg-red-500/30 rounded px-2 py-1 transition-colors"
+                  >
+                    {isRetrying ? (
+                      <>
+                        <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                        Checking connection...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Retry Connection
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                <p>{error}</p>
+              </>
+            )}
           </div>
         )}
 
@@ -94,7 +174,7 @@ const Login = () => {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || isRetrying}
             className="w-full bg-gradient-to-r from-sky-600 to-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-all duration-300 hover:from-sky-500 hover:to-blue-600 disabled:opacity-50 flex items-center justify-center"
           >
             {loading ? (

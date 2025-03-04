@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/config";
 // src/components/features/ScenarioChallenge/EvaluatorModal.jsx
 import React, { useState, useEffect } from 'react';
 import { 
@@ -14,6 +15,7 @@ import {
   Brain,
   RefreshCw
 } from 'lucide-react';
+import ApiService from '../../../services/apiService';
 
 const ScoreCard = ({ category, score, description }) => {
   // Helper function to determine score color
@@ -113,34 +115,15 @@ IMPORTANT: Return ONLY the raw JSON object without any markdown formatting or co
           ]
         };
 
-        // Get appropriate headers based on auth type
-        const headers = {
-          'Content-Type': 'application/json'
-        };
-
-        // Add either guest code or auth token
-        if (isGuest && guestCode) {
-          headers.guestcode = guestCode;
-        } else {
-          const token = localStorage.getItem('token');
-          if (token) {
-            headers.Authorization = `Bearer ${token}`;
-          }
-        }
-
         console.log('Sending evaluation request...');
-        const response = await fetch('http://localhost:5001/api/chat/evaluate', {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify(evaluationPrompt)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Server error');
+        let data;
+        
+        if (isGuest && guestCode) {
+          data = await ApiService.evaluateGuestChat(guestCode, evaluationPrompt.messages);
+        } else {
+          data = await ApiService.evaluateChat(evaluationPrompt.messages);
         }
-
-        const data = await response.json();
+        
         console.log('Received evaluation:', data);
 
         // Validate the evaluation data

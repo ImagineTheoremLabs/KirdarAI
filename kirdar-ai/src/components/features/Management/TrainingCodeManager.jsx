@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/config";
 // src/components/features/Management/TrainingCodeManager.jsx
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Clock, Users, CheckCircle2, XCircle, Loader } from 'lucide-react';
@@ -16,7 +17,7 @@ const TrainingCodeManager = () => {
   const fetchCodes = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5001/api/admin/codes', {
+      const response = await fetch('${API_BASE_URL}/admin/codes', {
         headers: getAuthHeaders()
       });
 
@@ -41,7 +42,7 @@ const TrainingCodeManager = () => {
   const generateCode = async () => {
     try {
       setGenerating(true);
-      const response = await fetch('http://localhost:5001/api/admin/codes/generate', {
+      const response = await fetch('${API_BASE_URL}/admin/codes/generate', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -65,7 +66,7 @@ const TrainingCodeManager = () => {
 
   const deactivateCode = async (codeId) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/admin/codes/${codeId}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/codes/${codeId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

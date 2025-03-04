@@ -1,7 +1,7 @@
 // controllers/scenarioController.js
 
 const OpenAI = require('openai');
-const Scenario = require('../models/scenario');
+const Scenario = require('../models/Scenario');
 const ScenarioAssignment = require('../models/ScenarioAssignment');
 const User = require('../models/User');
 
@@ -70,9 +70,34 @@ const getScenarios = async (req, res) => {
       if (scenarios.length === 0 && domain) {
         console.log(`No scenarios found for domain ${domain}, generating...`);
         
-        // Use the existing generateScenarios logic
-        const generatedScenarios = await generateScenariosForDomain(domain, req.user._id);
-        return res.json(generatedScenarios);
+        try {
+          // Use the existing generateScenarios logic
+          req.body = { domain }; // Set up the request body for generateScenarios
+          
+          // Create a mock response object to capture the result
+          const mockRes = {
+            json: (data) => {
+              return data;
+            },
+            status: (code) => {
+              return {
+                json: (data) => {
+                  console.error(`Error generating scenarios: ${code}`, data);
+                  throw new Error(data.message || 'Error generating scenarios');
+                }
+              };
+            }
+          };
+          
+          const generatedScenarios = await generateScenariosForDomain(domain, req.user._id);
+          return res.json(generatedScenarios);
+        } catch (genError) {
+          console.error(`Error generating scenarios for ${domain}:`, genError);
+          return res.status(500).json({ 
+            message: `Error generating scenarios for ${domain}`, 
+            details: genError.message 
+          });
+        }
       }
 
       return res.json(scenarios);
@@ -93,46 +118,147 @@ const getScenarios = async (req, res) => {
 
   } catch (error) {
     console.error('Error in getScenarios:', error);
-    res.status(500).json({ message: 'Error fetching scenarios' });
+    res.status(500).json({ message: 'Error fetching scenarios', details: error.message });
   }
 };
 
 // Helper function to generate scenarios for a domain
 const generateScenariosForDomain = async (domain, userId) => {
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4",
-    messages: [
-      { 
-        role: "system", 
-        content: `You are an expert ${domain} training scenario creator.` 
-      },
-      { 
-        role: "user", 
-        content: `Generate 5 professional training scenarios for ${domain} practitioners.
-          Each scenario should include:
-          1. A title
-          2. A detailed description
-          3. Difficulty level (Intermediate, Advanced, or Expert)
-          4. 3-4 specific learning objectives
-          5. Estimated time (in minutes)
-          
-          Return in JSON format with scenarios array.`
+  try {
+    console.log(`Generating scenarios for domain: ${domain}`);
+    
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { 
+          role: "system", 
+          content: `You are an expert ${domain} training scenario creator. Your response must be valid JSON with the exact structure requested. Do not include any explanatory text outside the JSON.` 
+        },
+        { 
+          role: "user", 
+          content: `Generate 5 professional training scenarios for ${domain} practitioners.
+            Each scenario should include:
+            1. A title
+            2. A detailed description
+            3. Difficulty level (must be exactly one of: beginner, intermediate, or advanced)
+            4. 3-4 specific learning objectives as an array of strings
+            5. Estimated time in minutes (just the number)
+            6. A category relevant to ${domain} practice
+            
+            Return in this exact JSON format:
+            {
+              "scenarios": [
+                {
+                  "title": "string",
+                  "category": "string",
+                  "description": "string",
+                  "difficulty": "beginner",
+                  "objectives": ["string", "string", "string"],
+                  "estimatedTime": 30,
+                  "keyPoints": ["string", "string"]
+                }
+              ]
+            }
+            
+            IMPORTANT: 
+            - The difficulty MUST be exactly one of: "beginner", "intermediate", or "advanced" (all lowercase)
+            - The category field is required and must be a string
+            - The objectives must be an array of strings
+            - The estimatedTime should be a number (minutes)`
+        }
+      ],
+      temperature: 0.8,
+      response_format: { type: "json_object" } // Ensure JSON response format
+    });
+
+    // Log the raw response for debugging
+    console.log("OpenAI raw response content:", completion.choices[0].message.content);
+    
+    // Parse the response
+    const content = completion.choices[0].message.content.trim();
+    let generatedContent;
+    
+    try {
+      generatedContent = JSON.parse(content);
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      
+      // Try to find JSON in the response (sometimes OpenAI adds explanatory text)
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        console.log("Found JSON portion in response");
+        generatedContent = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("Could not find valid JSON in the response");
       }
-    ],
-    temperature: 0.8
-  });
+    }
 
-  const generatedContent = JSON.parse(completion.choices[0].message.content);
+    // Validate that the response has the expected structure
+    if (!generatedContent.scenarios || !Array.isArray(generatedContent.scenarios) || generatedContent.scenarios.length === 0) {
+      throw new Error("Invalid response structure: missing scenarios array");
+    }
 
-  // Save new scenarios in DB
-  const scenariosToSave = generatedContent.scenarios.map(scenario => ({
-    ...scenario,
-    domain,
-    createdBy: userId,
-    isActive: true
-  }));
+    // Process and save the scenarios
+    const scenariosToSave = generatedContent.scenarios.map(scenario => {
+      // Ensure category is present
+      const scenarioCategory = scenario.category || `${domain} General`;
+      
+      // Normalize difficulty to match enum values
+      let normalizedDifficulty = 'intermediate'; // default
+      if (scenario.difficulty) {
+        const difficultyLower = scenario.difficulty.toLowerCase();
+        if (difficultyLower.includes('begin') || difficultyLower.includes('basic') || difficultyLower.includes('easy')) {
+          normalizedDifficulty = 'beginner';
+        } else if (difficultyLower.includes('inter') || difficultyLower.includes('medium')) {
+          normalizedDifficulty = 'intermediate';
+        } else if (difficultyLower.includes('adv') || difficultyLower.includes('expert') || difficultyLower.includes('hard')) {
+          normalizedDifficulty = 'advanced';
+        }
+      }
 
-  return await Scenario.insertMany(scenariosToSave);
+      // Ensure objectives is an array
+      const objectives = Array.isArray(scenario.objectives) ? 
+        scenario.objectives : 
+        [scenario.objectives || 'Complete the scenario successfully'];
+
+      // Ensure estimatedTime is a number
+      let estimatedTime = 30; // default
+      if (scenario.estimatedTime) {
+        if (typeof scenario.estimatedTime === 'number') {
+          estimatedTime = scenario.estimatedTime;
+        } else if (typeof scenario.estimatedTime === 'string') {
+          // Try to extract a number from the string (e.g., "30 minutes" -> 30)
+          const timeMatch = scenario.estimatedTime.match(/\d+/);
+          if (timeMatch) {
+            estimatedTime = parseInt(timeMatch[0], 10);
+          }
+        }
+      }
+
+      // Ensure keyPoints is an array
+      const keyPoints = Array.isArray(scenario.keyPoints) ?
+        scenario.keyPoints :
+        (scenario.keyPoints ? [scenario.keyPoints] : []);
+
+      return {
+        title: scenario.title || `${domain} Scenario`,
+        domain,
+        category: scenarioCategory,
+        description: scenario.description || `A training scenario for ${domain} practitioners`,
+        difficulty: normalizedDifficulty,
+        objectives: objectives,
+        estimatedTime: estimatedTime,
+        keyPoints: keyPoints,
+        createdBy: userId,
+        isActive: true
+      };
+    });
+
+    return await Scenario.insertMany(scenariosToSave);
+  } catch (error) {
+    console.error(`Error in generateScenariosForDomain for ${domain}:`, error);
+    throw error;
+  }
 };
 
 // @desc    Create new scenario
@@ -253,6 +379,11 @@ const generateScenarios = async (req, res) => {
   try {
     const { domain, category, subCategory } = req.body;
 
+    // Validate domain is provided
+    if (!domain) {
+      return res.status(400).json({ message: 'Domain is required' });
+    }
+
     // Build context-specific prompt
     let prompt = `Generate 5 professional training scenarios for ${domain} practitioners`;
     
@@ -266,56 +397,169 @@ const generateScenarios = async (req, res) => {
     prompt += `.\nEach scenario should be realistic and challenging, including:
     1. A title
     2. A detailed description of the client situation
-    3. Difficulty level (Intermediate, Advanced, or Expert)
-    4. 3-4 specific learning objectives
-    5. Estimated time (in minutes)
-    6. Key points or client profile details
+    3. Difficulty level (must be exactly one of: beginner, intermediate, or advanced)
+    4. 3-4 specific learning objectives as an array of strings
+    5. Estimated time in minutes (just the number)
+    6. Key points or client profile details as an array of strings
 
     Return them in this exact JSON format:
     {
       "scenarios": [
         {
           "title": "string",
-          "category": "${category || 'string'}",
-          "subCategory": "${subCategory || 'string'}",
+          "category": "${category || domain + ' General'}",
           "description": "string",
-          "difficulty": "string",
-          "objectives": ["string"],
-          "estimatedTime": "string",
-          "keyPoints": ["string"]
+          "difficulty": "intermediate",
+          "objectives": ["string", "string", "string"],
+          "estimatedTime": 30,
+          "keyPoints": ["string", "string"]
         }
       ]
-    }`;
+    }
+
+    IMPORTANT: 
+    - The difficulty MUST be exactly one of: "beginner", "intermediate", or "advanced" (all lowercase)
+    - The category field is required and must be a string
+    - The objectives must be an array of strings
+    - The estimatedTime should be a number (minutes)`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         { 
           role: "system", 
-          content: `You are an expert ${domain} training scenario creator, specializing in ${category || domain} scenarios.` 
+          content: `You are an expert ${domain} training scenario creator, specializing in ${category || domain} scenarios. Your response must be valid JSON with the exact structure requested. Do not include any explanatory text outside the JSON.` 
         },
         { role: "user", content: prompt }
       ],
-      temperature: 0.8
+      temperature: 0.7,
+      response_format: { type: "json_object" } // Ensure JSON response format
     });
 
-    const generatedContent = JSON.parse(completion.choices[0].message.content);
+    try {
+      // Log the raw response for debugging
+      console.log("OpenAI raw response content:", completion.choices[0].message.content);
+      
+      // Check if the response starts with a valid JSON character
+      const content = completion.choices[0].message.content.trim();
+      let generatedContent;
+      
+      try {
+        generatedContent = JSON.parse(content);
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        
+        // Try to find JSON in the response (sometimes OpenAI adds explanatory text)
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          console.log("Found JSON portion in response");
+          generatedContent = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error("Could not find valid JSON in the response");
+        }
+      }
 
-    // Save new scenarios in DB
-    const scenariosToSave = generatedContent.scenarios.map(scenario => ({
-      ...scenario,
-      domain,
-      category: category || scenario.category,
-      subCategory: subCategory || scenario.subCategory,
-      createdBy: req.user._id,
-      isActive: true
-    }));
+      // Validate that the response has the expected structure
+      if (!generatedContent.scenarios || !Array.isArray(generatedContent.scenarios) || generatedContent.scenarios.length === 0) {
+        throw new Error("Invalid response structure: missing scenarios array");
+      }
 
-    const savedScenarios = await Scenario.insertMany(scenariosToSave);
-    res.json(savedScenarios);
+      // Save new scenarios in DB
+      const scenariosToSave = generatedContent.scenarios.map(scenario => {
+        // Ensure category is present - this was causing the validation error
+        const scenarioCategory = scenario.category || `${domain} General`;
+        
+        // Normalize difficulty to match enum values - this was causing the validation error
+        let normalizedDifficulty = 'intermediate'; // default
+        if (scenario.difficulty) {
+          const difficultyLower = scenario.difficulty.toLowerCase();
+          if (difficultyLower.includes('begin') || difficultyLower.includes('basic') || difficultyLower.includes('easy')) {
+            normalizedDifficulty = 'beginner';
+          } else if (difficultyLower.includes('inter') || difficultyLower.includes('medium')) {
+            normalizedDifficulty = 'intermediate';
+          } else if (difficultyLower.includes('adv') || difficultyLower.includes('expert') || difficultyLower.includes('hard')) {
+            normalizedDifficulty = 'advanced';
+          }
+        }
+
+        // Ensure objectives is an array
+        const objectives = Array.isArray(scenario.objectives) ? 
+          scenario.objectives : 
+          [scenario.objectives || 'Complete the scenario successfully'];
+
+        // Ensure estimatedTime is a number
+        let estimatedTime = 30; // default
+        if (scenario.estimatedTime) {
+          if (typeof scenario.estimatedTime === 'number') {
+            estimatedTime = scenario.estimatedTime;
+          } else if (typeof scenario.estimatedTime === 'string') {
+            // Try to extract a number from the string (e.g., "30 minutes" -> 30)
+            const timeMatch = scenario.estimatedTime.match(/\d+/);
+            if (timeMatch) {
+              estimatedTime = parseInt(timeMatch[0], 10);
+            }
+          }
+        }
+
+        // Ensure keyPoints is an array
+        const keyPoints = Array.isArray(scenario.keyPoints) ?
+          scenario.keyPoints :
+          (scenario.keyPoints ? [scenario.keyPoints] : []);
+
+        return {
+          title: scenario.title || `${domain} Scenario`,
+          domain,
+          category: scenarioCategory,
+          description: scenario.description || `A training scenario for ${domain} practitioners`,
+          difficulty: normalizedDifficulty,
+          objectives: objectives,
+          estimatedTime: estimatedTime,
+          keyPoints: keyPoints,
+          createdBy: req.user._id,
+          isActive: true
+        };
+      });
+
+      const savedScenarios = await Scenario.insertMany(scenariosToSave);
+      res.json(savedScenarios);
+    } catch (error) {
+      console.error("Error processing OpenAI response:", error);
+      console.error("Response content:", completion.choices[0].message.content);
+      
+      // Provide more specific error message based on the error type
+      let errorMessage = "Failed to generate scenarios. Please try again.";
+      if (error.message.includes("Could not find valid JSON") || error.message.includes("Invalid response structure")) {
+        errorMessage = "The AI returned an invalid response format. Please try again.";
+      } else if (error.name === "SyntaxError") {
+        errorMessage = "Failed to parse the AI response. Please try again.";
+      } else if (error.name === "ValidationError") {
+        errorMessage = "The generated scenarios did not meet validation requirements. Please try again with specific details: " + error.message;
+      }
+      
+      res.status(500).json({ error: errorMessage, details: error.message });
+    }
   } catch (error) {
     console.error('Error generating scenarios:', error);
-    res.status(500).json({ message: 'Failed to generate scenarios' });
+    
+    // Check if this is an OpenAI API error
+    let errorMessage = "Failed to generate scenarios";
+    let errorDetails = error.message;
+    
+    if (error.response) {
+      // Log more details about the OpenAI API error
+      console.error('OpenAI API error details:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data
+      });
+      
+      errorMessage += ` (OpenAI API error: ${error.response.status})`;
+      if (error.response.data && error.response.data.error) {
+        errorDetails = error.response.data.error.message || errorDetails;
+      }
+    }
+    
+    res.status(500).json({ message: errorMessage, details: errorDetails });
   }
 };
 

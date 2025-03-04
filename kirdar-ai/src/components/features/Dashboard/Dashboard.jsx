@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/config";
 // src/components/features/Dashboard/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -42,19 +43,19 @@ const Dashboard = () => {
         console.log('Fetching data with token:', token ? 'Token exists' : 'No token');
 
         // Fetch activities
-        const activityResponse = await fetch('http://localhost:5001/api/user/activity', {
+        const activityResponse = await fetch(`${API_BASE_URL}/api/user/activity`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
 
-        const scenariosResponse = await fetch('http://localhost:5001/api/scenarios', {
+        const scenariosResponse = await fetch(`${API_BASE_URL}/api/scenarios`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
 
-        const personasResponse = await fetch('http://localhost:5001/api/personas', {
+        const personasResponse = await fetch(`${API_BASE_URL}/api/personas`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

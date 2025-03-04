@@ -21,6 +21,8 @@ import {
   UserPlus
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { API_BASE_URL } from '../../../config/config';
+import ApiService from '../../../services/apiService';
 import CreatePersona from './CreatePersona';
 import HandbookManager from './HandbookManager';
 import Modal from '../../common/Modal/Modal';
@@ -132,7 +134,7 @@ const ClientPersonas = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isResetting, setIsResetting] = useState(false);
-  const [selectedDomain, setSelectedDomain] = useState('financial');
+  const [selectedDomain, setSelectedDomain] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPersonas, setFilteredPersonas] = useState([]);
@@ -143,22 +145,8 @@ const ClientPersonas = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-      const response = await fetch(`${apiUrl}/personas`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to fetch personas');
-      }
-
-      const data = await response.json();
+      const data = await ApiService.getPersonas();
       setPersonas(data);
     } catch (err) {
       console.error('Error fetching personas:', err);
@@ -209,18 +197,7 @@ const ClientPersonas = () => {
 
   const handleDeletePersona = async (persona) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-      const response = await fetch(`${apiUrl}/personas/${persona._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to delete persona');
-      }
+      await ApiService.deletePersona(persona._id);
 
       setSuccessMessage('Persona deleted successfully!');
       await fetchPersonas();
@@ -239,21 +216,9 @@ const ClientPersonas = () => {
     try {
       setIsResetting(true);
       setError('');
-      const token = localStorage.getItem('token');
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-      const response = await fetch(`${apiUrl}/personas/reset`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      await ApiService.resetPersonas();
       
-      if (!response.ok) {
-        throw new Error('Failed to reset database');
-      }
-
-      const data = await response.json();
       setSuccessMessage('Database reset to default personas successfully!');
       await fetchPersonas();
       
@@ -274,25 +239,13 @@ const ClientPersonas = () => {
       setError(null);
       setGenerationSuccess('');
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-      const response = await fetch(`${apiUrl}/personas/generate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          domain: selectedDomain,
-          category: selectedCategory !== 'all' ? selectedCategory : null,
-          numPersonas: 5 // Generate 5 personas at a time
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate personas');
-      }
-
-      const newPersonas = await response.json();
+      const newPersonas = await ApiService.generatePersonas(
+        selectedDomain !== 'all' ? selectedDomain : null,
+        5, // Generate 5 personas at a time
+        false,
+        selectedCategory !== 'all' ? selectedCategory : null // Pass the selected category if not 'all'
+      );
+      
       setPersonas(prev => [...prev, ...newPersonas]);
       setGenerationSuccess('New personas generated successfully!');
     } catch (err) {

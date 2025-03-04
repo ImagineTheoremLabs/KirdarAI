@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/config";
 //src/components/features/Voice/VoiceRecorder.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Loader } from 'lucide-react';
@@ -78,7 +79,7 @@ const VoiceRecorder = ({ onTranscription, onError, disabled }) => {
       formData.append('audio', audioBlob);
 
       const token = localStorage.getItem('token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const apiUrl = import.meta.env.VITE_API_URL || '${API_BASE_URL}';
       const response = await fetch(`${apiUrl}/audio/transcribe`, {
         method: 'POST',
         headers: {

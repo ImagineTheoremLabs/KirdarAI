@@ -10,14 +10,17 @@ const openai = new OpenAI({
 
 /**
  * Handles general chat interactions based on scenario or persona.
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
 const handleChat = async (req, res) => {
   try {
     const { message, conversationHistory, type, context } = req.body;
-    console.log('Received chat request:', { message, conversationHistory, type, context });
+    console.log('Received chat request:', { message, type, context: context?.data?.title || 'No context' });
 
     if (!message || !type || !context?.data) {
       return res.status(400).json({ 
+        success: false,
         message: 'Missing required fields: message, type, or context data' 
       });
     }
@@ -59,15 +62,24 @@ IMPORTANT GUIDELINES:
       temperature: 0.7
     });
 
-    res.json({ response: completion.choices[0].message.content });
+    res.json({ 
+      success: true,
+      response: completion.choices[0].message.content 
+    });
   } catch (error) {
     console.error('Chat error:', error);
-    res.status(500).json({ message: 'Error processing chat' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Error processing chat',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
 /**
  * Evaluates the chat conversation using OpenAI's API.
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
 const evaluateChat = async (req, res) => {
   try {
@@ -77,6 +89,7 @@ const evaluateChat = async (req, res) => {
     if (!messages || !Array.isArray(messages)) {
       console.error('Invalid messages format:', messages);
       return res.status(400).json({ 
+        success: false,
         message: 'Invalid request format. Messages array is required.' 
       });
     }
@@ -113,7 +126,10 @@ const evaluateChat = async (req, res) => {
       }
 
       console.log('Successfully parsed evaluation result');
-      res.json(evaluationResult);
+      res.json({
+        success: true,
+        ...evaluationResult
+      });
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError);
       console.log('Raw response:', rawContent);
@@ -123,6 +139,7 @@ const evaluateChat = async (req, res) => {
   } catch (error) {
     console.error('Detailed evaluation error:', error);
     res.status(500).json({ 
+      success: false,
       message: 'Error evaluating conversation',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
@@ -131,6 +148,8 @@ const evaluateChat = async (req, res) => {
 
 /**
  * Fetches mentor suggestions from OpenAI's API.
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
 const getMentorSuggestions = async (req, res) => {
   try {
@@ -138,11 +157,12 @@ const getMentorSuggestions = async (req, res) => {
     
     if (!messages || !Array.isArray(messages) || messages.length < 2) {
       return res.status(400).json({ 
-        error: 'Invalid request format. Messages array with system and user messages is required.' 
+        success: false,
+        message: 'Invalid request format. Messages array with system and user messages is required.' 
       });
     }
 
-    console.log('Processing mentor request with messages:', messages);
+    console.log('Processing mentor request with messages count:', messages.length);
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4-turbo-preview",
@@ -164,7 +184,7 @@ const getMentorSuggestions = async (req, res) => {
     });
 
     const content = completion.choices[0].message.content;
-    console.log('Received mentor response:', content);
+    console.log('Received mentor response');
 
     // Parse and validate the response
     try {
@@ -177,6 +197,7 @@ const getMentorSuggestions = async (req, res) => {
 
       // Sanitize and format the response
       const sanitizedResponse = {
+        success: true,
         suggestions: parsedResponse.suggestions.slice(0, 3).map(s => String(s)),
         warning: String(parsedResponse.warning || ''),
         tip: String(parsedResponse.tip || '')
@@ -186,14 +207,18 @@ const getMentorSuggestions = async (req, res) => {
       
     } catch (parseError) {
       console.error('Parse error:', parseError, 'Raw content:', content);
-      res.status(500).json({ error: 'Failed to parse AI response' });
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to parse AI response' 
+      });
     }
 
   } catch (error) {
     console.error('Mentor API error:', error);
     res.status(500).json({ 
-      error: error.message || 'Failed to get mentor suggestions',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      success: false,
+      message: 'Failed to get mentor suggestions',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

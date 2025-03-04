@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/config";
 // src/components/features/Management/UserManagementView.jsx
 import { useState, useEffect } from 'react';
 import { 
@@ -124,8 +125,8 @@ const UserManagementView = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-      const response = await fetch(`${apiUrl}/auth/trainees`, {
+      const apiUrl = import.meta.env.VITE_API_URL || API_BASE_URL;
+      const response = await fetch(`${apiUrl}/api/auth/trainees`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -149,8 +150,8 @@ const UserManagementView = () => {
       const token = localStorage.getItem('token');
       
       // Fetch all scenarios
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-      const scenariosResponse = await fetch(`${apiUrl}/scenarios`, {
+      const apiUrl = import.meta.env.VITE_API_URL || API_BASE_URL;
+      const scenariosResponse = await fetch(`${apiUrl}/api/scenarios`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -162,7 +163,7 @@ const UserManagementView = () => {
 
       // Fetch current assignments
       const assignmentsResponse = await fetch(
-        `${apiUrl}/scenario-assignments/user/${selectedUser._id}`,
+        `${apiUrl}/api/scenario-assignments/user/${selectedUser._id}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -188,8 +189,8 @@ const UserManagementView = () => {
       const token = localStorage.getItem('token');
       
       // Fetch all personas
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-      const allPersonasResponse = await fetch(`${apiUrl}/personas`, {
+      const apiUrl = import.meta.env.VITE_API_URL || API_BASE_URL;
+      const allPersonasResponse = await fetch(`${apiUrl}/api/personas`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -202,7 +203,7 @@ const UserManagementView = () => {
 
       // Fetch current assignments
       const assignmentsResponse = await fetch(
-        `http://localhost:5001/api/persona-assignments/user/${selectedUser._id}`,
+        `${apiUrl}/api/persona-assignments/user/${selectedUser._id}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -223,10 +224,11 @@ const UserManagementView = () => {
   const handlePersonaToggle = async (personaId, isChecked) => {
     try {
       const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || API_BASE_URL;
       
       if (isChecked) {
         // Assign persona
-        const response = await fetch('http://localhost:5001/api/persona-assignments', {
+        const response = await fetch(`${apiUrl}/api/persona-assignments`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -250,7 +252,7 @@ const UserManagementView = () => {
 
         if (assignment) {
           const response = await fetch(
-            `http://localhost:5001/api/persona-assignments/${assignment._id}`,
+            `${apiUrl}/api/persona-assignments/${assignment._id}`,
             {
               method: 'PUT',
               headers: {
@@ -286,10 +288,11 @@ const UserManagementView = () => {
   const handleScenarioToggle = async (scenarioId, isChecked) => {
     try {
       const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || API_BASE_URL;
       
       if (isChecked) {
         // Assign scenario
-        const response = await fetch('http://localhost:5001/api/scenario-assignments', {
+        const response = await fetch(`${apiUrl}/api/scenario-assignments`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -313,7 +316,7 @@ const UserManagementView = () => {
   
         if (assignment) {
           const response = await fetch(
-            `http://localhost:5001/api/scenario-assignments/${assignment._id}`,
+            `${apiUrl}/api/scenario-assignments/${assignment._id}`,
             {
               method: 'PUT',
               headers: {
@@ -381,12 +384,13 @@ const UserManagementView = () => {
     
     try {
       const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || API_BASE_URL;
       
       if (activeTab === 'personas') {
         // Process personas
         for (const personaId of selectedPersonas) {
           try {
-            const response = await fetch('http://localhost:5001/api/persona-assignments', {
+            const response = await fetch(`${apiUrl}/api/persona-assignments`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${token}`,
@@ -410,7 +414,7 @@ const UserManagementView = () => {
         // Process scenarios
         for (const scenarioId of selectedScenarios) {
           try {
-            const response = await fetch('http://localhost:5001/api/scenario-assignments', {
+            const response = await fetch(`${apiUrl}/api/scenario-assignments`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${token}`,

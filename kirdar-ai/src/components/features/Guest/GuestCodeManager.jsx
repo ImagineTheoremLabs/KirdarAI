@@ -11,6 +11,7 @@ import {
   Activity
 } from 'lucide-react';
 import GuestCodeGeneration from '../Management/GuestCodeGeneration';
+import { API_BASE_URL } from '../../../config/config';
 
 const FeatureTag = ({ label, enabled, icon: Icon }) => (
   <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
@@ -33,14 +34,22 @@ const GuestCodeManager = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5001/api/admin/guest/codes', {
+      console.log('API_BASE_URL:', API_BASE_URL);
+      console.log('Fetching from URL:', `${API_BASE_URL}/api/admin/guest/codes`);
+      
+      const response = await fetch(`${API_BASE_URL}/api/admin/guest/codes`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch guest codes');
+        const errorText = await response.text();
+        console.error('Error response text:', errorText);
+        throw new Error(`Failed to fetch guest codes: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -61,7 +70,7 @@ const GuestCodeManager = () => {
   const handleDeactivateCode = async (codeId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5001/api/admin/guest/codes/${codeId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/guest/codes/${codeId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

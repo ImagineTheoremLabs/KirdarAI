@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/config";
 // src/components/features/Dashboard/JoinTrainingSection.jsx
 import React, { useState } from 'react';
 import { ArrowRight, Loader, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -15,7 +16,7 @@ const JoinTrainingSection = () => {
     setLoading(true);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const apiUrl = import.meta.env.VITE_API_URL || '${API_BASE_URL}';
       const response = await fetch(`${apiUrl}/trainee/join`, {
         method: 'POST',
         headers: {

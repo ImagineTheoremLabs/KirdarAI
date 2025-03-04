@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Loader, Users, Target, Brain, Award } from 'lucide-react';
 import Modal from '../../common/Modal/Modal';
+import { API_BASE_URL } from '../../../config/config';
 
 const FeatureToggle = ({ label, description, enabled, onChange }) => (
   <div className="flex items-center justify-between py-4 border-b border-gray-800 last:border-0">
@@ -86,10 +87,10 @@ const GuestCodeGeneration = ({ onCodeGenerated }) => {
         const token = localStorage.getItem('token');
         
         const [personasResponse, scenariosResponse] = await Promise.all([
-          fetch('http://localhost:5001/api/personas', {
+          fetch(`${API_BASE_URL}/api/personas`, {
             headers: { 'Authorization': `Bearer ${token}` }
           }),
-          fetch('http://localhost:5001/api/scenarios', {
+          fetch(`${API_BASE_URL}/api/scenarios`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
         ]);
@@ -133,7 +134,7 @@ const GuestCodeGeneration = ({ onCodeGenerated }) => {
 
       console.log('Generating code with data:', requestData);
       
-      const response = await fetch('http://localhost:5001/api/admin/guest/codes/generate', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/guest/codes/generate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

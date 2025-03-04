@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/config";
 // src/components/features/ScenarioChallenge/MentorPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { 
@@ -11,6 +12,7 @@ import {
   ChevronUp,
   ChevronDown,
 } from 'lucide-react';
+import ApiService from '../../../services/apiService';
 
 const SuggestionCard = ({ suggestion, onClick }) => (
   <button
@@ -120,17 +122,13 @@ ${relevantMessages.map(msg =>
         }
       ];
 
-      const response = await fetch('http://localhost:5001/api/chat/mentor', {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ messages })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get mentor response');
+      let data;
+      if (isGuest) {
+        data = await ApiService.getGuestMentorSuggestions(guestCode, messages);
+      } else {
+        data = await ApiService.getMentorSuggestions(messages);
       }
 
-      const data = await response.json();
       setMentorResponse(data);
       setLastAnalyzedLength(chatHistory.length);
 

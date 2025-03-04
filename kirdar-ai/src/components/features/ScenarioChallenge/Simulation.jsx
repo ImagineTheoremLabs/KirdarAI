@@ -1,4 +1,3 @@
-// src/components/features/ScenarioChallenge/Simulation.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -15,8 +14,8 @@ import VoiceControls from '../Voice/VoiceControls';
 import EvaluatorModal from './EvaluatorModal';
 import SimulationHeader from './SimulationHeader';
 import MentorPanel from './MentorPanel';
-
-const API_BASE_URL = 'http://localhost:5001/api';
+import { API_BASE_URL } from '../../../config/config';
+import ApiService from '../../../services/apiService';
 
 // Message Bubble Component
 const MessageBubble = ({ message, isUser, isMentor }) => (
@@ -183,30 +182,23 @@ const Simulation = ({ isGuest = false, initialData = null, onEnd = null }) => {
       setChatHistory(prev => [...prev, newMessage]);
       setMessage('');
   
-      // Fix: Updated endpoint construction
-      const endpoint = isGuest 
-        ? `${API_BASE_URL}/guest/chat`
-        : `${API_BASE_URL}/chat`;
-  
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({
-          message: messageToSend,
-          conversationHistory: chatHistory.filter(msg => msg.role !== 'system'),
-          type: simulationData.type,
-          context: { 
-            data: getContextData() 
-          }
-        })
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Server error: ${response.status}`);
+      let data;
+      if (isGuest) {
+        data = await ApiService.sendGuestChatMessage(
+          guestCode,
+          messageToSend,
+          chatHistory.filter(msg => msg.role !== 'system'),
+          simulationData.type,
+          { data: getContextData() }
+        );
+      } else {
+        data = await ApiService.sendChatMessage(
+          messageToSend,
+          chatHistory.filter(msg => msg.role !== 'system'),
+          simulationData.type,
+          { data: getContextData() }
+        );
       }
-  
-      const data = await response.json();
       
       if (!data.response) {
         throw new Error('Invalid response format from server');

@@ -18,7 +18,7 @@ import {
   Building,
   Heart
 } from 'lucide-react';
-import personaService from '../../../services/personaService';
+import ApiService from '../../../services/apiService';
 import { DOMAIN_PROMPTS } from '../../../config/domainPrompts';
 
 const CreatePersona = ({ onClose, onPersonaCreated }) => {
@@ -79,7 +79,7 @@ const CreatePersona = ({ onClose, onPersonaCreated }) => {
       
       setGenerationStep(`Generating personas ${i * batchSize + 1} to ${Math.min((i + 1) * batchSize, totalCount)}...`);
       
-      const personas = await personaService.generatePersonas(description, currentBatchSize, false);
+      const personas = await ApiService.generatePersonas(description, currentBatchSize, false);
       allPersonas.push(...personas);
       
       setGeneratedCount(allPersonas.length);
@@ -103,14 +103,14 @@ const CreatePersona = ({ onClose, onPersonaCreated }) => {
       const personas = await generatePersonasBatch(description, numPersonas);
       
       setGenerationStep('Saving personas to database...');
-      for (const [index, personaData] of personas.entries()) {
-        try {
-          await personaService.createPersona(personaData);
-          setGenerationStep(`Saved persona ${index + 1} of ${personas.length}`);
-        } catch (createError) {
-          console.error('Error creating individual persona:', createError);
-          throw new Error(`Failed to create persona ${index + 1}: ${createError.message}`);
-        }
+      
+      // Use bulk create instead of individual creates to avoid duplicate key errors
+      try {
+        await ApiService.createBulkPersonas(personas);
+        setGenerationStep(`Saved all ${personas.length} personas`);
+      } catch (createError) {
+        console.error('Error creating personas in bulk:', createError);
+        throw new Error(`Failed to create personas: ${createError.message}`);
       }
 
       onPersonaCreated();

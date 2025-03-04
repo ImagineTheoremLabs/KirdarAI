@@ -1,41 +1,63 @@
 // src/services/scenarioService.js
+import ApiService from './apiService';
+
 class ScenarioService {
+  /**
+   * Get all scenarios
+   * @returns {Promise<Array>} - List of scenarios
+   */
   async getScenarios() {
+    return ApiService.getScenarios();
+  }
+
+  /**
+   * Get a scenario by ID
+   * @param {string} id - Scenario ID
+   * @returns {Promise<Object>} - The scenario
+   */
+  async getScenario(id) {
+    return ApiService.getScenario(id);
+  }
+
+  /**
+   * Create a new scenario
+   * @param {Object} scenarioData - The scenario data
+   * @returns {Promise<Object>} - The created scenario
+   */
+  async createScenario(scenarioData) {
     try {
-      const token = localStorage.getItem('token');
-      console.log('Fetching scenarios with token:', token ? 'Token exists' : 'No token');
+      // Validate scenario data before sending
+      const requiredFields = ['title', 'description', 'domain', 'category'];
+      const missingFields = requiredFields.filter(field => !scenarioData[field]);
       
-      if (!token) {
-        throw new Error('No authentication token found');
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-      const response = await fetch(`${apiUrl}/scenarios`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('Scenarios response status:', response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Failed to fetch scenarios:', errorData);
-        throw new Error(errorData.message || 'Failed to fetch scenarios');
-      }
-
-      const data = await response.json();
-      console.log('Fetched scenarios:', data);
-      return data;
+      return ApiService.createScenario(scenarioData);
     } catch (error) {
-      console.error('Detailed error in getScenarios:', {
-        message: error.message,
-        stack: error.stack,
-        response: error.response
-      });
+      console.error('Error creating scenario:', error);
       throw error;
     }
+  }
+
+  /**
+   * Update a scenario
+   * @param {string} id - Scenario ID
+   * @param {Object} scenarioData - Updated scenario data
+   * @returns {Promise<Object>} - The updated scenario
+   */
+  async updateScenario(id, scenarioData) {
+    return ApiService.updateScenario(id, scenarioData);
+  }
+
+  /**
+   * Delete a scenario
+   * @param {string} id - Scenario ID
+   * @returns {Promise<Object>} - Result of deletion
+   */
+  async deleteScenario(id) {
+    return ApiService.deleteScenario(id);
   }
 }
 

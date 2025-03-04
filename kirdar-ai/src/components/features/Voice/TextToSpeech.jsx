@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../../config/config";
 //src/components/features/Voice/TextToSpeech.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Volume2, VolumeX, Loader } from 'lucide-react';
@@ -36,7 +37,7 @@ const TextToSpeech = ({ text, autoPlay = false }) => {
         cleanup();
 
         const token = localStorage.getItem('token');
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+        const apiUrl = import.meta.env.VITE_API_URL || '${API_BASE_URL}';
         const response = await fetch(`${apiUrl}/audio/speech`, {
           method: 'POST',
           headers: {

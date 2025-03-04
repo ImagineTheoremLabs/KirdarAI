@@ -4,7 +4,7 @@
 # This script helps deploy the application to an EC2 instance
 
 echo "🚀 Building frontend application..."
-cd /Users/sahilwikhe/downloads/mentorguestworking4\\(scenarios\\)\ 3/kirdar-ai
+cd "$(dirname "$0")"
 npm run build
 
 echo "📦 Creating deployment package..."

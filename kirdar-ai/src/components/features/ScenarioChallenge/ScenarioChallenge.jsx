@@ -1,5 +1,6 @@
+import { API_BASE_URL } from "../../../config/config";
 // src/components/features/ScenarioChallenge/ScenarioChallenge.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   GraduationCap, 
   Shield, 
@@ -34,6 +35,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import ScenarioCard from './ScenarioCard';
 import { useAuth } from '../../../contexts/AuthContext';
+import ApiService from '../../../services/apiService';
 
 // Example domain configuration — adjust as needed
 const PROFESSIONAL_DOMAINS = {
@@ -269,24 +271,12 @@ const ScenarioChallenge = () => {
         setLoading(true);
         setError(null);
 
-        const token = localStorage.getItem('token');
         // First, clear existing scenarios for this domain
         setScenarios(prevScenarios => 
           prevScenarios.filter(s => s.domain !== selectedDomain)
         );
         
-        const response = await fetch(`http://localhost:5001/api/scenarios?domain=${selectedDomain}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch scenarios');
-        }
-
-        const data = await response.json();
+        const data = await ApiService.getScenariosByDomain(selectedDomain);
         
         // Only set scenarios for the current domain
         setScenarios(prevScenarios => {
@@ -320,7 +310,7 @@ const ScenarioChallenge = () => {
       setError('');
       const token = localStorage.getItem('token');
       
-      const response = await fetch('http://localhost:5001/api/scenarios/reset', {
+      const response = await fetch(`${API_BASE_URL}/api/scenarios/reset`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -355,7 +345,7 @@ const ScenarioChallenge = () => {
       const token = localStorage.getItem('token');
       
       // First try to fetch existing scenarios for this domain
-      const response = await fetch(`http://localhost:5001/api/scenarios?domain=${domainId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/scenarios?domain=${domainId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -376,7 +366,7 @@ const ScenarioChallenge = () => {
         });
       } else {
         // If no scenarios exist, generate new ones
-        const generateResponse = await fetch('http://localhost:5001/api/scenarios/generate', {
+        const generateResponse = await fetch(`${API_BASE_URL}/api/scenarios/generate`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -412,7 +402,7 @@ const ScenarioChallenge = () => {
       setError(null);
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5001/api/scenarios/refresh/${selectedDomain}`, {
+      const response = await fetch(`${API_BASE_URL}/api/scenarios/refresh/${selectedDomain}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -497,7 +487,7 @@ const ScenarioChallenge = () => {
       setGenerationSuccess('');
 
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5001/api/scenarios/generate', {
+      const response = await fetch(`${API_BASE_URL}/api/scenarios/generate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

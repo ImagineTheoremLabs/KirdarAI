@@ -1,13 +1,17 @@
 // src/components/features/Auth/Register.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Key, Loader } from 'lucide-react';
+import { Mail, Lock, User, Key, Loader, AlertCircle, RefreshCw, WifiOff } from 'lucide-react';
+import { useAuth } from '../../../contexts/AuthContext';
+import ApiService from '../../../services/apiService';
 
 const Register = () => {
   const navigate = useNavigate();
   const [showAdminCode, setShowAdminCode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isConnectionError, setIsConnectionError] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,10 +20,27 @@ const Register = () => {
     adminCode: ''
   });
 
+  // Listen for API connection changes
+  useEffect(() => {
+    const handleConnectionChange = (event) => {
+      if (event.detail.connected && isConnectionError) {
+        setError('');
+        setIsConnectionError(false);
+      }
+    };
+
+    window.addEventListener('api-connection-change', handleConnectionChange);
+    
+    return () => {
+      window.removeEventListener('api-connection-change', handleConnectionChange);
+    };
+  }, [isConnectionError]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setIsConnectionError(false);
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -28,30 +49,52 @@ const Register = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:5001/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          adminCode: formData.adminCode
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        navigate('/login');
-      } else {
-        throw new Error(data.message || 'Registration failed');
-      }
+      const userData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        adminCode: formData.adminCode
+      };
+      
+      await ApiService.register(userData);
+      navigate('/login');
     } catch (err) {
-      setError(err.message);
+      console.error('Registration error:', err);
+      
+      // Display user-friendly error messages
+      if (err.isConnectionError) {
+        setError('Unable to connect to the server. Please check your internet connection or try again later.');
+        setIsConnectionError(true);
+      } else if (err.status === 400) {
+        if (err.data && err.data.message) {
+          setError(err.data.message);
+        } else {
+          setError('Invalid registration information. Please check your details and try again.');
+        }
+      } else if (err.status === 409) {
+        setError('An account with this email already exists. Please use a different email or try logging in.');
+      } else {
+        setError(err.message || 'Registration failed. Please try again later.');
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRetryConnection = async () => {
+    setIsRetrying(true);
+    try {
+      const isConnected = await ApiService.checkApiConnectivity();
+      if (isConnected) {
+        setError('');
+        setIsConnectionError(false);
+      } else {
+        setError('Still unable to connect to the server. Please try again later.');
+      }
+    } catch (err) {
+      setError('Failed to check connection. Please try again later.');
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -63,8 +106,41 @@ const Register = () => {
         </h2>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 mb-6">
-            <p className="text-red-500">{error}</p>
+          <div className={`rounded-lg p-4 mb-6 flex items-start ${
+            isConnectionError 
+              ? 'bg-red-500/10 border border-red-500/50 text-red-500' 
+              : 'bg-yellow-500/10 border border-yellow-500/50 text-yellow-500'
+          }`}>
+            {isConnectionError ? (
+              <>
+                <WifiOff className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p>{error}</p>
+                  <button
+                    onClick={handleRetryConnection}
+                    disabled={isRetrying}
+                    className="mt-2 flex items-center text-xs bg-red-500/20 hover:bg-red-500/30 rounded px-2 py-1 transition-colors"
+                  >
+                    {isRetrying ? (
+                      <>
+                        <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                        Checking connection...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Retry Connection
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                <p>{error}</p>
+              </>
+            )}
           </div>
         )}
 
@@ -176,7 +252,7 @@ const Register = () => {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || isRetrying}
             className="w-full bg-gradient-to-r from-sky-600 to-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-all duration-300 hover:from-sky-500 hover:to-blue-600 disabled:opacity-50 flex items-center justify-center"
           >
             {loading ? (

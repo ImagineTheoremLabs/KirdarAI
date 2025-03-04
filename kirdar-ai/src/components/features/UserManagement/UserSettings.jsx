@@ -274,7 +274,7 @@ const UserSettings = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const apiUrl = import.meta.env.VITE_API_URL || '${API_BASE_URL}';
       const response = await fetch(`${apiUrl}/auth/update`, {
         method: 'PUT',
         headers: {

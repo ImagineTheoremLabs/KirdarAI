@@ -1,38 +1,23 @@
 // src/services/personaService.js
+import ApiService from './apiService';
+
 class PersonaService {
+  /**
+   * Generate personas based on a description
+   * @param {string} description - Description to base personas on
+   * @param {number} numPersonas - Number of personas to generate
+   * @param {boolean} isNameOnly - Whether to generate only names
+   * @returns {Promise<Array>} - The generated personas
+   */
   async generatePersonas(description, numPersonas = 1, isNameOnly = false) {
     try {
       console.log('Starting batch persona generation:', { description, numPersonas, isNameOnly });
       
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
       if (numPersonas > 20) {
         throw new Error('Maximum number of personas exceeded (limit: 20)');
       }
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-      const response = await fetch(`${apiUrl}/personas/generate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          description,
-          numPersonas,
-          isNameOnly
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Server error: ${response.status}`);
-      }
-
-      const personas = await response.json();
+      const personas = await ApiService.generatePersonas(description, numPersonas, isNameOnly);
       
       // Validate response data
       if (!Array.isArray(personas)) {
@@ -71,13 +56,13 @@ class PersonaService {
     }
   }
 
+  /**
+   * Create a single persona
+   * @param {Object} personaData - The persona data
+   * @returns {Promise<Object>} - The created persona
+   */
   async createPersona(personaData) {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
       // Validate persona data before sending
       const requiredFields = ['name', 'age', 'income', 'portfolio', 'riskTolerance', 'goals', 'concerns', 'knowledgeLevel'];
       const missingFields = requiredFields.filter(field => !personaData[field]);
@@ -86,22 +71,7 @@ class PersonaService {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-      const response = await fetch(`${apiUrl}/personas`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(personaData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create persona');
-      }
-
-      const createdPersona = await response.json();
+      const createdPersona = await ApiService.createPersona(personaData);
       console.log('Successfully created persona:', createdPersona);
       return createdPersona;
     } catch (error) {
@@ -110,13 +80,13 @@ class PersonaService {
     }
   }
 
+  /**
+   * Create multiple personas in bulk
+   * @param {Array} personas - Array of persona data
+   * @returns {Promise<Object>} - Results of bulk creation
+   */
   async createBulkPersonas(personas) {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
       const results = [];
       const errors = [];
 
@@ -157,6 +127,42 @@ class PersonaService {
       console.error('Error in bulk persona creation:', error);
       throw error;
     }
+  }
+
+  /**
+   * Get all personas
+   * @returns {Promise<Array>} - List of personas
+   */
+  async getPersonas() {
+    return ApiService.getPersonas();
+  }
+
+  /**
+   * Get a persona by ID
+   * @param {string} id - Persona ID
+   * @returns {Promise<Object>} - The persona
+   */
+  async getPersona(id) {
+    return ApiService.getPersona(id);
+  }
+
+  /**
+   * Update a persona
+   * @param {string} id - Persona ID
+   * @param {Object} personaData - Updated persona data
+   * @returns {Promise<Object>} - The updated persona
+   */
+  async updatePersona(id, personaData) {
+    return ApiService.updatePersona(id, personaData);
+  }
+
+  /**
+   * Delete a persona
+   * @param {string} id - Persona ID
+   * @returns {Promise<Object>} - Result of deletion
+   */
+  async deletePersona(id) {
+    return ApiService.deletePersona(id);
   }
 }
 
